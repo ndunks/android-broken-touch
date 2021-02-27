@@ -5,6 +5,9 @@
 #include <string.h>
 #include <signal.h>
 #include <linux/input.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
 
 static volatile sig_atomic_t interrupted = 0;
 
@@ -80,10 +83,10 @@ int choose_device(int default_select)
     return option[selected - 1];
 }
 
-void capture_mouse(int input_event_no)
+void capture_mouse(int input_event_no, struct sockaddr_in target)
 {
     char dev_name[1024];
-    int fd, i, rd, event_size;
+    int fd, i, rd, event_size, net_fd;
     struct input_event ev[64];
     fd_set rdfs;
 
@@ -103,6 +106,13 @@ void capture_mouse(int input_event_no)
         printf("Device already grabbed by another process\nCheck with fuser -v %s\n", dev_name);
         exit(EXIT_FAILURE);
     }
+    net_fd = socket(AF_INET, SOCK_DGRAM, 0);
+    if (net_fd < 0)
+    {
+        perror("net");
+        goto err;
+    }
+
     signal(SIGINT, interrupt_handler);
     signal(SIGTERM, interrupt_handler);
     FD_ZERO(&rdfs);
@@ -129,21 +139,61 @@ err:
     ioctl(fd, EVIOCGRAB, (void *)0);
     close(fd);
 }
-
+void *atos(struct sockaddr_in *addr)
+{
+    uint32_t ip = ntohl(addr->sin_addr.s_addr);
+    uint16_t port = ntohs(addr->sin_port);
+    // maks: xxx.xxx.xxx.xxx:xxxxx
+    char *buff = malloc(22);
+    sprintf(buff, "%d.%d.%d.%d:%d\n",
+            ip >> 24 & 0xff,
+            ip >> 16 & 0xff,
+            ip >> 8 & 0xff,
+            ip >> 0 & 0xff,
+            port);
+    printf(buff);
+    free(buff);
+}
 int main(int argc, char **argv)
 {
     int input_event_no, default_select = -1;
-    if (argc > 1)
+    struct sockaddr_in sockbc;
+    char *ip, *port;
+
+    if (argc < 2)
     {
-        default_select = atoi(argv[1]);
+        printf("%s ip[:port 1567] [mouse]");
+        return 1;
     }
+
+    sockbc.sin_family = AF_INET;
+    sockbc.sin_addr.s_addr = INADDR_BROADCAST;
+    ip = strtok(argv[1], ":");
+    port = strtok(NULL, "");
+    if (port != NULL)
+        sockbc.sin_port = htons(atoi(port));
+    else
+        sockbc.sin_port = htons(1567);
+
+    if (inet_aton(argv[1], &sockbc.sin_addr) == 0)
+    {
+        printf("Invalid IPv4\n");
+        return 1;
+    }
+
+    printf("Your mouse will redirected to UDP ");
+    atos(&sockbc);
+
+    if (argc > 2)
+        default_select = atoi(argv[2]);
+
     input_event_no = choose_device(default_select);
     if (input_event_no < 0)
     {
         perror("Require working mouse.");
         return 1;
     }
-    capture_mouse(input_event_no);
+    capture_mouse(input_event_no, sockbc);
 
     return 0;
 }
