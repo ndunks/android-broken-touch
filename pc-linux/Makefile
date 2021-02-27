@@ -1,12 +1,10 @@
-LDFLAGS =
-CFLAGS = -Wall
-
-build: main
+build:
+	$(CC) main.c -o broken-touch-pc
 
 clean:
-	@rm -f main 2>/dev/null
+	@rm -f broken-touch-pc 2>/dev/null
 
 watch:
-	nodemon -V -e c,h -x "make && sudo ./main 1 || false"
+	nodemon -V -e c,h -x "make && sudo ./broken-touch-pc 1 || false"
 
-.PHONY: build clean watch
+.PHONY: clean watch

@@ -3,7 +3,15 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <string.h>
+#include <signal.h>
 #include <linux/input.h>
+
+static volatile sig_atomic_t interrupted = 0;
+
+static void interrupt_handler(int sig)
+{
+    interrupted = 1;
+}
 
 int choose_device(int default_select)
 {
@@ -72,26 +80,54 @@ int choose_device(int default_select)
     return option[selected - 1];
 }
 
-int capture_mouse(int input_event_no)
+void capture_mouse(int input_event_no)
 {
-    char input_event_dev[255];
-    int fd, size;
-    ssize_t len, event_size;
-    struct input_event event;
-    event_size = sizeof(event);
-    sprintf(input_event_dev, "/dev/input/event%d", input_event_no);
-    printf("Opening %s\n", input_event_dev);
-    fd = open(input_event_dev, O_RDONLY);
+    char dev_name[1024];
+    int fd, i, rd, event_size;
+    struct input_event ev[64];
+    fd_set rdfs;
+
+    event_size = (int)sizeof(struct input_event);
+
+    sprintf(dev_name, "/dev/input/event%d", input_event_no);
+    printf("Opening %s\n", dev_name);
+    fd = open(dev_name, O_RDONLY);
     if (fd < 0)
     {
         perror("Failed");
         exit(EXIT_FAILURE);
     }
-    while (read(fd, &event, event_size))
+    if (ioctl(fd, EVIOCGRAB, (void *)1) != 0)
     {
-        printf("time%ld.%06ld\t%x\t%x\t%x\n",
-               event.time.tv_sec, event.time.tv_usec, event.type, event.code, event.value);
+        close(fd);
+        printf("Device already grabbed by another process\nCheck with fuser -v %s\n", dev_name);
+        exit(EXIT_FAILURE);
     }
+    signal(SIGINT, interrupt_handler);
+    signal(SIGTERM, interrupt_handler);
+    FD_ZERO(&rdfs);
+    FD_SET(fd, &rdfs);
+    while (!interrupted)
+    {
+        select(fd + 1, &rdfs, NULL, NULL, NULL);
+        if (interrupted)
+            break;
+        rd = read(fd, ev, sizeof(ev));
+
+        if (rd < event_size)
+        {
+            printf("expected %d bytes, got %d\n", event_size, rd);
+            perror("\nevtest: error reading");
+            goto err;
+        }
+        for (i = 0; i < rd / event_size; i++)
+        {
+            printf("%d\t%d\t%d\n", ev[i].type, ev[i].code, ev[i].value);
+        }
+    }
+err:
+    ioctl(fd, EVIOCGRAB, (void *)0);
+    close(fd);
 }
 
 int main(int argc, char **argv)
