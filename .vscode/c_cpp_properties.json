@@ -1,0 +1,25 @@
+{
+    "configurations": [
+        {
+            "name": "Linux",
+            "includePath": [
+                "/data/android/sdk/ndk-bundle/sysroot/usr/include",
+                "/data/android/sdk/ndk-bundle/sources/cxx-stl/llvm-libc++/include",
+                "${workspaceFolder}/android/include/system/core/include",
+                "${workspaceFolder}/android/include/frameworks/native/include",
+                "${workspaceFolder}/android/include/hardware/libhardware/include",
+                "${workspaceFolder}/android/include/external/skia/include/core",
+	            "${workspaceFolder}/android/include/external/skia/include/effects",
+	            "${workspaceFolder}/android/include/external/skia/include/images",
+	            "${workspaceFolder}/android/include/external/skia/src/ports",
+	            "${workspaceFolder}/android/include/external/skia/include/utils"
+            ],
+            "defines": ["INPUT_DEBUG=1"],
+            "compilerPath": "/data/android/sdk/ndk-bundle/toolchains/llvm/prebuilt/linux-x86_64/bin/clang",
+            "cStandard": "c11",
+            "cppStandard": "c++17",
+            "intelliSenseMode": "clang-x64"
+        }
+    ],
+    "version": 4
+}

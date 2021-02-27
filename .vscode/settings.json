@@ -1,0 +1,16 @@
+{
+    "files.watcherExclude": {
+        "include/": true,
+        "build/": true
+    },
+    "files.associations": {
+        "random": "c",
+        "cstdio": "cpp",
+        "fstream": "cpp",
+        "ios": "cpp",
+        "istream": "cpp",
+        "locale": "cpp",
+        "streambuf": "cpp",
+        "*.tcc": "cpp"
+    }
+}
