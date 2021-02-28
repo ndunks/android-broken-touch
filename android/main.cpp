@@ -43,24 +43,28 @@ static int mice_setup()
     }
 
     // Tell bout this device support for keys
-    if (ioctl(fd, UI_SET_EVBIT, EV_KEY) < 0)
+    if (ioctl(fd, UI_SET_EVBIT, EV_SYN) < 0)
     {
         printf("Fail ioctl /dev/uinput");
         return 1;
     }
+    
+    ioctl(fd, UI_SET_EVBIT, EV_KEY);
     ioctl(fd, UI_SET_KEYBIT, EV_REP);
-    ioctl(fd, UI_SET_KEYBIT, EV_SYN);
     ioctl(fd, UI_SET_KEYBIT, BTN_LEFT);
     ioctl(fd, UI_SET_KEYBIT, BTN_RIGHT);
     ioctl(fd, UI_SET_KEYBIT, BTN_MIDDLE);
+    ioctl(fd, UI_SET_KEYBIT, BTN_SIDE);
+    ioctl(fd, UI_SET_KEYBIT, BTN_EXTRA);
+
     ioctl(fd, UI_SET_EVBIT, EV_REL);
     ioctl(fd, UI_SET_RELBIT, REL_X);
     ioctl(fd, UI_SET_RELBIT, REL_Y);
+    ioctl(fd, UI_SET_RELBIT, REL_HWHEEL);
+    ioctl(fd, UI_SET_RELBIT, REL_WHEEL);
 
-    for (i = REL_X; i < REL_MAX; i++)
-    {
-        ioctl(fd, UI_SET_RELBIT, i);
-    }
+    ioctl(fd, UI_SET_EVBIT, EV_MSC);
+    ioctl(fd, UI_SET_MSCBIT, MSC_SCAN);
 
     memset(&uidev, 0, sizeof(uidev));
     snprintf(uidev.name, UINPUT_MAX_NAME_SIZE, "fixbrokentouch");
@@ -81,10 +85,6 @@ static int mice_setup()
         return 1;
     }
 
-    // mice_event = (input_event *)malloc(event_len);
-    // mice_event_sync = (input_event *)calloc(event_len, 1);
-    // mice_event_sync->type = EV_SYN;
-    // mice_event_sync->code = SYN_REPORT;
     return 0;
 }
 
@@ -95,83 +95,8 @@ static void mice_clear()
     {
         close(fd);
     }
-    // free(mice_event);
-    // free(mice_event_sync);
 }
 
-// static void mice_write(uint16_t type, uint16_t code, int32_t value)
-// {
-//     memset(mice_event, 0, sizeof(struct input_event));
-//     mice_event->type = type;
-//     mice_event->code = code;
-//     mice_event->value = value;
-//     write(fd, mice_event, sizeof(struct input_event));
-// }
-
-// static void mice_write_sync(uint16_t type, uint16_t code, int32_t value)
-// {
-//     mice_write(type, code, value);
-//     write(fd, mice_event_sync, sizeof(struct input_event));
-// }
-
-// void mice_press(uint16_t code)
-// {
-//     mice_write_sync(EV_KEY, code, 1);
-// }
-
-// void mice_release(uint16_t code)
-// {
-//     mice_write_sync(EV_KEY, code, 0);
-// }
-
-// void mice_click(uint16_t code)
-// {
-//     mice_press(code);
-//     mice_release(code);
-// }
-
-// void mice_move(int x, int y)
-// {
-//     mice_write(EV_REL, REL_X, x);
-//     mice_write_sync(EV_REL, REL_Y, y);
-// }
-
-// void mice_commander()
-// {
-//     char *line = NULL;
-//     size_t len = 0;
-//     ssize_t lineSize = 0;
-//     int x, y;
-//     printf("Command: x y or c\n");
-//     while (1)
-//     {
-//         lineSize = getline(&line, &len, stdin);
-//         switch (line[0])
-//         {
-//         case 'x':
-//             printf("Bye\n");
-//             free(line);
-//             return;
-//         case 'b':
-//             printf("BACK\n");
-//             mice_press(BTN_RIGHT);
-//             break;
-//         case 'c':
-//             printf("CLICK\n");
-//             mice_press(BTN_LEFT);
-//             break;
-//         default:
-//             strtok(line, " ");
-//             x = atoi(line);
-//             strtok(NULL, " ");
-//             y = atoi(line);
-//             printf("X = %d, Y = %d\n", x, y);
-//             mice_move(x, y);
-//             break;
-//         }
-//     }
-//     free(line);
-// }
 int main(int argc, const char **argv)
 {
     int sock_fd, buf_len, i;
