@@ -5,6 +5,7 @@
             "includePath": [
                 "/data/android/sdk/ndk-bundle/sysroot/usr/include",
                 "/data/android/sdk/ndk-bundle/sources/cxx-stl/llvm-libc++/include",
+                "${workspaceFolder}/shared",
                 "${workspaceFolder}/android/include/system/core/include",
                 "${workspaceFolder}/android/include/frameworks/native/include",
                 "${workspaceFolder}/android/include/hardware/libhardware/include",

@@ -1,5 +1,5 @@
 build:
-	$(CC) main.c -o broken-touch-pc
+	$(CC) main.c -I../shared -o broken-touch-pc
 
 clean:
 	@rm -f broken-touch-pc 2>/dev/null

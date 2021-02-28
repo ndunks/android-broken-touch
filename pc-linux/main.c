@@ -8,6 +8,9 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include "input-debug.h"
+
+#define DEBUG
 
 static volatile sig_atomic_t interrupted = 0;
 
@@ -15,6 +18,8 @@ static void interrupt_handler(int sig)
 {
     interrupted = 1;
 }
+
+int event_len, sock_len;
 
 int choose_device(int default_select)
 {
@@ -85,15 +90,19 @@ int choose_device(int default_select)
 
 void capture_mouse(int input_event_no, struct sockaddr_in target)
 {
-    char dev_name[1024];
-    int fd, i, rd, event_size, net_fd;
-    struct input_event ev[64];
+    char dev_name[1024], *buf, *buf_send;
+    int fd, i, event_count, recv_len, event_len,
+        sock_fd, buf_len, send_len, event_time_len,
+        android_event_size = 16;
+    struct input_event *ev;
     fd_set rdfs;
 
-    event_size = (int)sizeof(struct input_event);
+    event_len = (int)sizeof(struct input_event);
+    event_time_len = (int)sizeof(ev->time);
+    buf_len = event_len * 64;
 
     sprintf(dev_name, "/dev/input/event%d", input_event_no);
-    printf("Opening %s\n", dev_name);
+    printf("Opening %d %s\n", event_time_len, dev_name);
     fd = open(dev_name, O_RDONLY);
     if (fd < 0)
     {
@@ -106,8 +115,8 @@ void capture_mouse(int input_event_no, struct sockaddr_in target)
         printf("Device already grabbed by another process\nCheck with fuser -v %s\n", dev_name);
         exit(EXIT_FAILURE);
     }
-    net_fd = socket(AF_INET, SOCK_DGRAM, 0);
-    if (net_fd < 0)
+    sock_fd = socket(AF_INET, SOCK_DGRAM, 0);
+    if (sock_fd < 0)
     {
         perror("net");
         goto err;
@@ -117,25 +126,46 @@ void capture_mouse(int input_event_no, struct sockaddr_in target)
     signal(SIGTERM, interrupt_handler);
     FD_ZERO(&rdfs);
     FD_SET(fd, &rdfs);
+    buf = malloc(buf_len);
+    buf_send = malloc(buf_len);
     while (!interrupted)
     {
         select(fd + 1, &rdfs, NULL, NULL, NULL);
         if (interrupted)
             break;
-        rd = read(fd, ev, sizeof(ev));
+        recv_len = read(fd, buf, 2048);
 
-        if (rd < event_size)
+        if (recv_len % event_len != 0)
         {
-            printf("expected %d bytes, got %d\n", event_size, rd);
-            perror("\nevtest: error reading");
-            goto err;
+            printf("Corrupted event. %d %% %d != 0\n", recv_len, event_len);
+            continue;
         }
-        for (i = 0; i < rd / event_size; i++)
+        // linux x86_64 = 24 byte, Android Arm 16 byte
+        // sizeof(input_event.time), linux x86_64 = 16 byte, Arm = 8 byte
+        event_count = recv_len / event_len;
+        ev = (struct input_event *)buf;
+        for (i = 0; i < event_len; i++)
         {
-            printf("%d\t%d\t%d\n", ev[i].type, ev[i].code, ev[i].value);
+            ev->time.tv_sec = 0;
+            ev->time.tv_usec = 0;
+            memcpy(buf_send + android_event_size * i, ((char *)ev) + 8, android_event_size);
+            ev++;
         }
+
+        sendto(sock_fd, buf_send, android_event_size * event_count, 0, (struct sockaddr *)&target, sock_len);
+#ifdef DEBUG
+        ev = (struct input_event *)buf;
+        for (i = 0; i < recv_len / event_len; i++)
+        {
+            print_event(ev);
+            ev++;
+        }
+        printf("---> %2d event - %d bytes\n", recv_len / event_len, recv_len);
+#endif
     }
 err:
+    free(buf);
+    free(buf_send);
     ioctl(fd, EVIOCGRAB, (void *)0);
     close(fd);
 }
@@ -154,11 +184,13 @@ void *atos(struct sockaddr_in *addr)
     printf(buff);
     free(buff);
 }
+
 int main(int argc, char **argv)
 {
     int input_event_no, default_select = -1;
     struct sockaddr_in sockbc;
     char *ip, *port;
+    sock_len = sizeof(struct sockaddr_in);
 
     if (argc < 2)
     {
