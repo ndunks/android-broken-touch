@@ -13,8 +13,6 @@
 
 #include "input-debug.h"
 
-#define DEBUG
-
 static int fd = 0, event_len, sock_len;
 //static struct input_event *mice_event, *mice_event_sync;
 
@@ -48,14 +46,17 @@ static int mice_setup()
         printf("Fail ioctl /dev/uinput");
         return 1;
     }
-    
+
+    ioctl(fd, UI_SET_EVBIT, EV_REP);
     ioctl(fd, UI_SET_EVBIT, EV_KEY);
-    ioctl(fd, UI_SET_KEYBIT, EV_REP);
     ioctl(fd, UI_SET_KEYBIT, BTN_LEFT);
     ioctl(fd, UI_SET_KEYBIT, BTN_RIGHT);
     ioctl(fd, UI_SET_KEYBIT, BTN_MIDDLE);
     ioctl(fd, UI_SET_KEYBIT, BTN_SIDE);
     ioctl(fd, UI_SET_KEYBIT, BTN_EXTRA);
+    ioctl(fd, UI_SET_KEYBIT, KEY_POWER);
+    ioctl(fd, UI_SET_KEYBIT, KEY_BACK);
+    ioctl(fd, UI_SET_KEYBIT, KEY_HOME);
 
     ioctl(fd, UI_SET_EVBIT, EV_REL);
     ioctl(fd, UI_SET_RELBIT, REL_X);
@@ -135,18 +136,19 @@ int main(int argc, const char **argv)
         printf("Cannot open fd\n");
         return 1;
     }
-    printf("Listening on ");
     if (bind(sock_fd, (struct sockaddr *)&server, sock_len) != 0)
     {
         perror("UDP");
         goto end;
     }
+
+#ifdef DEBUG
+    printf("Listening on ");
     atos(&server);
-        struct input_event utest;
+#endif
+
     // linux x86_64 = 24 byte, Android Arm 16 byte
     event_len = sizeof(struct input_event);
-    printf("event_len %d, time len %d\n", event_len,sizeof(utest.time));
-
     buf = (char *)malloc(buf_len);
 
     while (1)
@@ -155,19 +157,24 @@ int main(int argc, const char **argv)
         memset(&client, 0, sock_len);
         recv_len = recvfrom(sock_fd, buf, buf_len, 0, (struct sockaddr *)&client, &client_len);
 
+#ifdef DEBUG
         if (recv_len % event_len != 0)
         {
             printf("(!) Some data corrupt\n");
         }
+#endif
         //write(fd, buf, recv_len);
-#ifdef DEBUG
         ev = (struct input_event *)buf;
         for (i = 0; i < recv_len / event_len; i++)
         {
             write(fd, ev, event_len);
+
+#ifdef DEBUG
             print_event(ev);
+#endif
             ev++;
         }
+#ifdef DEBUG
         printf("<--- %2d event - %d bytes\t", recv_len / event_len, recv_len);
         atos(&client);
 #endif

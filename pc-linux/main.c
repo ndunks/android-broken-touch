@@ -10,7 +10,6 @@
 #include <arpa/inet.h>
 #include "input-debug.h"
 
-#define DEBUG
 
 static volatile sig_atomic_t interrupted = 0;
 
@@ -148,10 +147,22 @@ void capture_mouse(int input_event_no, struct sockaddr_in target)
         {
             ev->time.tv_sec = 0;
             ev->time.tv_usec = 0;
+            // translate button
+            if (ev->type == EV_KEY)
+            {
+                switch (ev->code)
+                {
+                case BTN_MIDDLE:
+                    ev->code = KEY_POWER;
+                    break;
+                case BTN_RIGHT:
+                    ev->code = KEY_BACK;
+                    break;
+                }
+            }
             memcpy(buf_send + android_event_size * i, ((char *)ev) + 8, android_event_size);
             ev++;
         }
-
         sendto(sock_fd, buf_send, android_event_size * event_count, 0, (struct sockaddr *)&target, sock_len);
 #ifdef DEBUG
         ev = (struct input_event *)buf;

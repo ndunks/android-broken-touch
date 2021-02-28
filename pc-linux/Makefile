@@ -1,12 +1,12 @@
 build:
-	$(CC) main.c -I../shared -o broken-touch-pc
+	$(CC) $(APPEND) main.c -I../shared -o brokentouch-pc
 
 clean:
-	@rm -f broken-touch-pc 2>/dev/null
+	@rm -f brokentouch-pc 2>/dev/null
 
 watch:
 	
-	nodemon -V -e c,h -x "sudo killall broken-touch-pc & make && \
-	sudo ./broken-touch-pc 192.168.1.3 1 || false"
+	nodemon -V -e c,h -x "sudo killall brokentouch-pc & APPEND=-DDEBUG make  && \
+	sudo ./brokentouch-pc 192.168.1.3 2 || false"
 
 .PHONY: clean watch
