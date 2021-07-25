@@ -3,8 +3,8 @@ $(error ROOT_PATH not defined, please build using GNU Makefile (make) command)
 endif
 
 LOCAL_PATH:= $(call my-dir)
-
-PREBUILT=$(LOCAL_PATH)/include/prebuilt-armeabi-v7a/
+PLATFORM_INCLUDE_PATH := $(LOCAL_PATH)/include/$(TARGET_PLATFORM)
+PREBUILT=$(PLATFORM_INCLUDE_PATH)/prebuilt-$(TARGET_ARCH_ABI)
 
 include $(CLEAR_VARS)
 
@@ -50,7 +50,7 @@ LOCAL_SHARED_LIBRARIES := \
 	libbinder \
     libui
 LOCAL_C_INCLUDES += \
- 	$(LOCAL_PATH)/include/system/core/include \
-	$(LOCAL_PATH)/include/frameworks/native/include \
-	$(LOCAL_PATH)/include/hardware/libhardware/include
+ 	$(PLATFORM_INCLUDE_PATH)/system/core/include \
+	$(PLATFORM_INCLUDE_PATH)/frameworks/native/include \
+	$(PLATFORM_INCLUDE_PATH)/hardware/libhardware/include
 include $(BUILD_EXECUTABLE)

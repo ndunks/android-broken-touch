@@ -1,5 +1,5 @@
 build
-include/external
-include/frameworks
-include/hardware
-include/system
+include/android-*/external
+include/android-*/frameworks
+include/android-*/hardware
+include/android-*/system

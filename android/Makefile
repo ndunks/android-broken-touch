@@ -14,8 +14,13 @@ BUILD_PATH := $(PROJECT_PATH)/build
 NDK_OUT := $(BUILD_PATH)
 NDK_LIBS_OUT := $(BUILD_PATH)
 APP_BUILD_SCRIPT  := $(PROJECT_PATH)/Android.mk
-APP_ABI := armeabi-v7a
+APP_ABI ?= armeabi-v7a
+APP_PLATFORM ?= android-19
 
+ifeq ($(ANDROID),x86)
+APP_ABI := x86
+APP_PLATFORM := android-22
+endif
 
 ANDROID_ARGS := \
 	PROJECT_PATH=$(PROJECT_PATH) \
@@ -24,15 +29,15 @@ ANDROID_ARGS := \
 	NDK_OUT=$(NDK_OUT) \
 	NDK_LIBS_OUT=$(NDK_LIBS_OUT) \
 	PROJECT_PATH=$(PROJECT_PATH) \
-	APP_PLATFORM=android-19 \
+	APP_PLATFORM=$(APP_PLATFORM) \
 	NDK_PROJECT_PATH=null
 
 ANDROID_BUILD := @make  --no-print-dir -f $(ANDROID_NDK_HOME)/build/core/build-local.mk $(ANDROID_ARGS)
 UNLOCK_SCREEN = input keyevent KEYCODE_POWER
 
 build:
-ifeq (,$(wildcard include/frameworks))
-	make -C include
+ifeq (,$(wildcard include/$(APP_PLATFORM)/frameworks))
+	make -C include/$(APP_PLATFORM)
 endif
 	$(ANDROID_BUILD)
 
